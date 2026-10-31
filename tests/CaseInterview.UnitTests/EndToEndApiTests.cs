@@ -72,10 +72,10 @@ public class EndToEndApiTests : IClassFixture<WebApplicationFactory<Program>>
         var client = _factory.CreateClient();
 
         // -------------------------------------------------------------
-        // 1. Auth: Register
+        // 1. Auth: Register (as Admin for management lifecycle)
         // -------------------------------------------------------------
         var uniqueEmail = $"e2e_{Guid.NewGuid():N}@systemdesign.io";
-        var registerRequest = new RegisterRequest(uniqueEmail, "SecurePassword123!", "System Architect");
+        var registerRequest = new RegisterRequest(uniqueEmail, "SecurePassword123!", "System Architect", "Admin");
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register", registerRequest);
         var regErr = await registerResponse.Content.ReadAsStringAsync();
         registerResponse.StatusCode.Should().Be(HttpStatusCode.OK, regErr);
@@ -273,5 +273,38 @@ public class EndToEndApiTests : IClassFixture<WebApplicationFactory<Program>>
         // Verify book is deleted
         var getDeletedRes = await client.GetAsync($"/api/books/{bookId}");
         getDeletedRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task NormalUser_CannotUploadBook_CanOnlyViewBooks()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Register normal candidate user (Role: "User")
+        var userEmail = $"candidate_{Guid.NewGuid():N}@caseinterview.io";
+        var registerRequest = new RegisterRequest(userEmail, "CandidatePass123!", "Interview Candidate", "User");
+        var regResponse = await client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        regResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var authResult = await regResponse.Content.ReadFromJsonAsync<AuthResponse>(_jsonOptions);
+        authResult.Should().NotBeNull();
+        authResult!.Role.Should().Be("User");
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authResult.Token);
+
+        // 2. Candidate user CAN view books list
+        var listRes = await client.GetAsync("/api/books");
+        listRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 3. Candidate user CANNOT upload book -> 403 Forbidden
+        var pdfBytes = CreateSamplePdfBytes();
+        using var multipartContent = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(pdfBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        multipartContent.Add(fileContent, "file", "CandidateAttempt.pdf");
+        multipartContent.Add(new StringContent("Candidate Book"), "title");
+
+        var uploadRes = await client.PostAsync("/api/books", multipartContent);
+        uploadRes.StatusCode.Should().Be(HttpStatusCode.Forbidden, "Regular users must not be permitted to upload books");
     }
 }

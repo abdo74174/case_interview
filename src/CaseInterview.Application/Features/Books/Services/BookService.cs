@@ -84,16 +84,8 @@ public class BookService : IBookService
 
     public async Task<List<BookDto>> ListBooksAsync(CancellationToken cancellationToken = default)
     {
-        var userId = _currentUserService.UserId;
-        var isAdmin = _currentUserService.IsAdmin;
-
-        var query = _dbContext.Books.AsNoTracking();
-        if (userId.HasValue && !isAdmin)
-        {
-            query = query.Where(b => b.OwnerId == userId.Value);
-        }
-
-        return await query
+        return await _dbContext.Books
+            .AsNoTracking()
             .OrderByDescending(b => b.CreatedAtUtc)
             .Select(b => new BookDto(
                 b.Id,
@@ -110,14 +102,11 @@ public class BookService : IBookService
 
     public async Task<BookDetailDto> GetBookAsync(Guid bookId, CancellationToken cancellationToken = default)
     {
-        var userId = _currentUserService.UserId;
-        var isAdmin = _currentUserService.IsAdmin;
-
         var book = await _dbContext.Books
             .AsNoTracking()
             .Include(b => b.Chapters)
                 .ThenInclude(c => c.Chunks)
-            .FirstOrDefaultAsync(b => b.Id == bookId && (!userId.HasValue || isAdmin || b.OwnerId == userId.Value), cancellationToken);
+            .FirstOrDefaultAsync(b => b.Id == bookId, cancellationToken);
 
         if (book == null)
             throw new NotFoundException(nameof(Book), bookId);
@@ -147,11 +136,8 @@ public class BookService : IBookService
 
     public async Task DeleteBookAsync(Guid bookId, CancellationToken cancellationToken = default)
     {
-        var userId = CurrentUserId;
-        var isAdmin = _currentUserService.IsAdmin;
-
         var book = await _dbContext.Books
-            .FirstOrDefaultAsync(b => b.Id == bookId && (isAdmin || b.OwnerId == userId), cancellationToken);
+            .FirstOrDefaultAsync(b => b.Id == bookId, cancellationToken);
 
         if (book == null)
             throw new NotFoundException(nameof(Book), bookId);
@@ -164,11 +150,8 @@ public class BookService : IBookService
 
     public async Task<List<ChapterDetailDto>> GetChaptersAsync(Guid bookId, CancellationToken cancellationToken = default)
     {
-        var userId = _currentUserService.UserId;
-        var isAdmin = _currentUserService.IsAdmin;
-
         var bookExists = await _dbContext.Books
-            .AnyAsync(b => b.Id == bookId && (!userId.HasValue || isAdmin || b.OwnerId == userId.Value), cancellationToken);
+            .AnyAsync(b => b.Id == bookId, cancellationToken);
 
         if (!bookExists)
             throw new NotFoundException(nameof(Book), bookId);

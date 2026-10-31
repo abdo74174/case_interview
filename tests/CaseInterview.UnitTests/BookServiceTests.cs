@@ -123,7 +123,7 @@ public class BookServiceTests
     }
 
     [Fact]
-    public async Task ListBooks_OnlyReturnsBooksOwnedByCurrentUser()
+    public async Task ListBooks_ReturnsAllBooksInCatalog()
     {
         var userBook = new Book { OwnerId = _currentUserId, Title = "User's Book", FilePath = "/p1.pdf" };
         var otherUserBook = new Book { OwnerId = Guid.NewGuid(), Title = "Other User's Book", FilePath = "/p2.pdf" };
@@ -133,8 +133,7 @@ public class BookServiceTests
 
         var books = await _bookService.ListBooksAsync();
 
-        books.Should().HaveCount(1);
-        books[0].Title.Should().Be("User's Book");
+        books.Should().HaveCount(2);
     }
 
     [Fact]
