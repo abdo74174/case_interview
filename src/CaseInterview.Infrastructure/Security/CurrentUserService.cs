@@ -31,6 +31,13 @@ public class CurrentUserService : ICurrentUserService
         _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value
         ?? _httpContextAccessor.HttpContext?.User?.FindFirst("email")?.Value;
 
+    public string? Role =>
+        _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirst("role")?.Value;
+
+    public bool IsAdmin =>
+        string.Equals(Role, "Admin", StringComparison.OrdinalIgnoreCase);
+
     public bool IsAuthenticated =>
         _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 }

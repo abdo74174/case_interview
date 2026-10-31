@@ -21,6 +21,7 @@ public class JwtTokenService : IJwtTokenService
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_settings.SecretKey);
+        var userRole = string.IsNullOrWhiteSpace(user.Role) ? "User" : user.Role;
 
         var claims = new List<Claim>
         {
@@ -29,6 +30,8 @@ public class JwtTokenService : IJwtTokenService
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
+            new(ClaimTypes.Role, userRole),
+            new("role", userRole),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
