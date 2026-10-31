@@ -10,6 +10,8 @@ public interface IAuthService
 {
     Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
     Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<List<UserProfileDto>> ListUsersAsync(CancellationToken cancellationToken = default);
 }
 
 public class AuthService : IAuthService
@@ -43,11 +45,16 @@ public class AuthService : IAuthService
             });
         }
 
+        var assignedRole = string.Equals(request.Role, "Admin", StringComparison.OrdinalIgnoreCase)
+            ? "Admin"
+            : "User";
+
         var user = new User
         {
             Email = normalizedEmail,
             FullName = request.FullName.Trim(),
             PasswordHash = _passwordHasher.HashPassword(request.Password),
+            Role = assignedRole,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -60,6 +67,7 @@ public class AuthService : IAuthService
             UserId: user.Id,
             Email: user.Email,
             FullName: user.FullName,
+            Role: user.Role,
             ExpiresAtUtc: DateTime.UtcNow.AddHours(24)
         );
     }
@@ -82,7 +90,47 @@ public class AuthService : IAuthService
             UserId: user.Id,
             Email: user.Email,
             FullName: user.FullName,
+            Role: user.Role ?? "User",
             ExpiresAtUtc: DateTime.UtcNow.AddHours(24)
         );
+    }
+
+    public async Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .Include(u => u.Books)
+            .Include(u => u.Sessions)
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user == null)
+            throw new NotFoundException(nameof(User), userId);
+
+        return new UserProfileDto(
+            Id: user.Id,
+            Email: user.Email,
+            FullName: user.FullName,
+            Role: user.Role ?? "User",
+            CreatedAtUtc: user.CreatedAtUtc,
+            BooksCount: user.Books.Count,
+            SessionsCount: user.Sessions.Count
+        );
+    }
+
+    public async Task<List<UserProfileDto>> ListUsersAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .OrderByDescending(u => u.CreatedAtUtc)
+            .Select(u => new UserProfileDto(
+                u.Id,
+                u.Email,
+                u.FullName,
+                u.Role ?? "User",
+                u.CreatedAtUtc,
+                u.Books.Count,
+                u.Sessions.Count
+            ))
+            .ToListAsync(cancellationToken);
     }
 }

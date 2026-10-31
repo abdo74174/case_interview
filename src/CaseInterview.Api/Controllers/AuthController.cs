@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CaseInterview.Application.Features.Auth.DTOs;
 using CaseInterview.Application.Features.Auth.Services;
 using FluentValidation;
@@ -15,11 +16,11 @@ public class AuthController : ControllerBase
     private readonly IValidator<LoginRequest> _loginValidator;
 
     public AuthController(
-        IAuthService _authService,
+        IAuthService authService,
         IValidator<RegisterRequest> registerValidator,
         IValidator<LoginRequest> loginValidator)
     {
-        this._authService = _authService;
+        _authService = authService;
         _registerValidator = registerValidator;
         _loginValidator = loginValidator;
     }
@@ -62,5 +63,37 @@ public class AuthController : ControllerBase
 
         var response = await _authService.LoginAsync(request, cancellationToken);
         return Ok(response);
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(idClaim, out var userId))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Unauthorized",
+                Detail = "Valid user token claim is missing."
+            });
+        }
+
+        var profile = await _authService.GetProfileAsync(userId, cancellationToken);
+        return Ok(profile);
+    }
+
+    [HttpGet("users")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(List<UserProfileDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListUsers(CancellationToken cancellationToken)
+    {
+        var users = await _authService.ListUsersAsync(cancellationToken);
+        return Ok(users);
     }
 }

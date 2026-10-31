@@ -97,20 +97,32 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Using InMemory database; skipping relational migrations.");
         }
 
-        // Seed default demo user if database is empty
+        // Seed default demo users if database is empty
         if (!dbContext.Users.Any())
         {
             var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-            var demoUser = new User
+
+            var adminUser = new User
+            {
+                Email = "admin@caseinterview.io",
+                FullName = "Chief Architect (Admin)",
+                Role = "Admin",
+                PasswordHash = passwordHasher.HashPassword("AdminPassword123!"),
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            var candidateUser = new User
             {
                 Email = "architect@caseinterview.io",
-                FullName = "System Architect",
+                FullName = "Candidate Engineer",
+                Role = "User",
                 PasswordHash = passwordHasher.HashPassword("Password123!"),
                 CreatedAtUtc = DateTime.UtcNow
             };
-            dbContext.Users.Add(demoUser);
+
+            dbContext.Users.AddRange(adminUser, candidateUser);
             dbContext.SaveChanges();
-            logger.LogInformation("Seeded default demo user: architect@caseinterview.io");
+            logger.LogInformation("Seeded default users: admin@caseinterview.io (Admin) and architect@caseinterview.io (User)");
         }
     }
     catch (Exception ex)
