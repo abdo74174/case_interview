@@ -88,7 +88,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteBook(Guid id, CancellationToken cancellationToken)
@@ -108,7 +108,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpPost("{id:guid}/chapters/merge")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     [ProducesResponseType(typeof(ChapterDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> MergeChapters(
@@ -121,7 +121,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpPut("{id:guid}/chapters/reorder")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     [ProducesResponseType(typeof(List<ChapterDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ReorderChapters(
@@ -134,7 +134,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpPost("{id:guid}/confirm")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ConfirmChapters(Guid id, CancellationToken cancellationToken)
