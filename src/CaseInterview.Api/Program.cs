@@ -48,7 +48,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "CaseInterview API",
         Version = "v1",
-        Description = "Realistic Case-Based System Design Mock Interview Platform API"
+        Description = "Realistic Case-Based Mock Interview Platform API for learning from any book"
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
